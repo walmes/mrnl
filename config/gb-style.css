@@ -1,0 +1,170 @@
+/* General style ---------------------------- */
+
+body {
+    text-align: justify;
+}
+
+/* Parágrafos. ------------------------------ */
+
+p.caption {
+  color: #777;
+  margin-top: 10px;
+}
+
+p code {
+  white-space: inherit;
+}
+
+/* Referências ----------------------------- */
+
+.book .book-body .page-wrapper .page-inner div.references p {
+    text-indent: -1em;
+    margin-left: 1em;
+    text-align: left;
+}
+
+/* Código ----------------------------------- */
+
+pre {
+  word-break: normal;
+  word-wrap: normal;
+}
+
+pre code {
+  white-space: inherit;
+}
+
+tt, code, pre {
+    font-family: "Inconsolata", "Andale Mono", monospace !important;
+}
+
+pre {
+    border: none;
+    border-radius: 3px;
+}
+
+code > span.co {
+    font-style: italic;
+}
+
+.book .book-body .page-wrapper .page-inner section.normal pre,
+.book .book-body .page-wrapper .page-inner section.normal code {
+    line-height: 1.2;
+    padding: .3em .5em;
+}
+
+.book .book-body .page-wrapper .page-inner section.normal pre {
+    margin: 0 0 0.5em;
+    border: 1px solid #cecece;
+    border-radius: 3px;
+}
+
+.book .book-body .page-wrapper .page-inner section.normal pre.sourceCode {
+    background: #d7d7d7;
+}
+
+.book .book-body .page-wrapper .page-inner section.normal code::after,
+.book .book-body .page-wrapper .page-inner section.normal code::before {
+    content: unset;
+}
+
+.book .book-body .page-wrapper .page-inner section.normal code {
+    padding: 0em 0em;
+    background-color: unset !important;
+}
+
+/* Título, autores e numeração -------------- */
+
+#header .title {
+    text-align: center;
+    font-size: 2.5em;
+    margin-bottom: 0em;
+}
+
+h1.title + h3.subtitle {
+    /* color: red; */
+    margin: 0 0 0 0 !important;
+    text-align: center;
+}
+
+#header h4.author em {
+    font-style: normal;
+}
+
+.header-section-number {
+    display: block;
+    font-size: 70% !important;
+}
+
+address {
+   line-height: 1;
+   font-size: 1.5em !important;
+}
+
+address i.fa {
+   margin-right: 0.5ex;
+}
+
+/* Fontes ----------------------------------- */
+
+/* Fonte serif */
+.book.font-family-0 {
+    font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+}
+
+/* Fonte sans */
+.book.font-family-1 {
+    font-family: "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.book .book-header,
+.book .book-summary {
+    font-family: "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.book .book-body .page-wrapper .page-inner section.normal h4.author {
+  margin-bottom: 0px;
+  font-size: 1.5em;
+}
+
+/* Listas ----------------------------------- */
+
+ul:not([class]) li {
+    list-style: none;
+}
+
+ul:not([class]) li:before {
+    content: '\25B8';
+    margin-left: -1em;
+    position: absolute;
+}
+
+ul.summary li:before {
+    content: none;
+}
+
+/* Parafrases ------------------------------- */
+
+blockquote {
+    font-size: 100%;
+    width: 66%;
+    margin-left: auto;
+    border: none !important;
+    margin: auto !important;
+    display: block;
+    color: inherit;
+}
+
+blockquote p {
+    font-style: italic;
+    text-indent: 0em;
+}
+
+blockquote p:last-child {
+    text-indent: 0em;
+    text-align: right;
+    font-style: normal;
+    display: inherit;
+}
+
+/*------------------------------------------- */

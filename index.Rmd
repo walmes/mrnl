@@ -1,0 +1,78 @@
+---
+title: "Modelos de Regressão Não Linear"
+subtitle: "conceitos e aplicações em R"
+# author: "Prof. Walmes M. Zeviani"
+author:
+  - name: Walmes Marques Zeviani
+    affiliation: LEG/DEST/UFPR
+    email: walmes@ufpr.br
+    www: leg.ufpr.br/~walmes
+    github: github.com/walmes
+    twitter: "\\@walmeszeviani"
+  - name: Paulo Justiniano Ribeiro Jr
+    affiliation: LEG/DEST/UFPR
+    email: paulojus@ufpr.br
+    www: leg.ufpr.br/~paulojus
+  - name: Wagner Hugo Bonat
+    affiliation: LEG/DEST/UFPR
+    email: wbonat@ufpr.br
+    www: leg.ufpr.br/~wbonat
+    github: github.com/wbonat
+date: "Atualizado em `r format(Sys.Date(), format = '%d de %B de %Y')`"
+github-repo: walmes/mrnl
+description: "Material do Curso de Modelos de Regressão Não Linear"
+csl: config/ABNT_UFPR_2011-Mendeley.csl
+site: bookdown::bookdown_site
+#output: bookdown::gitbook
+# --- EPUB ------------------------------------------------------------
+cover-image: images/cover.png
+# --- LaTeX ------------------------------------------------------------
+documentclass: book
+# graphics é necessário quando uma template.
+graphics: yes
+#papersize: a5
+#fontsize: 9pt
+#geometry: 'margin=1in'
+geometry: [left=2.5cm, right=2cm, top=2cm, bottom=1.5cm]
+bibliography: [config/refs.bib]
+biblio-style: apalike
+link-citations: yes
+colorlinks: true
+#capas: config/capas.tex
+complement: >
+  \begin{flushleft}
+  Laboratório de Estatística e Geoinformação (LEG)\\
+  \url{http://www.leg.ufpr.br}\\
+  Departamento de Estatística\\
+  Universidade Federal do Paraná (UFPR)\newline\newline
+  \end{flushleft}
+  \vspace*{\fill}
+
+  \begin{center}
+  Curitiba, Paraná, Brasil\\
+  \end{center}
+---
+
+# {-}
+
+<!-- Imagem de capa. -->
+<img src="config/capa.png" width="350" height="460" alt="Modelos de Regressão Não Linear"/>
+
+```{r, include = FALSE, eval = isOutput("html")}
+# Para habilitar Font Awesome no documento.
+# https://github.com/rstudio/rmarkdown/issues/813
+# FIXME! Quando libera isso, aparece checkmark no TOC sidebar.
+# fa <- rmarkdown::html_dependency_font_awesome()
+# fa$attachment <- "fonts/fontawesome-webfont.ttf"
+# htmltools::tagList(fa)
+```
+
+# Resumo {-}
+
+TODO
+
+# Prefácio {-}
+
+TODO
+
+Para usar o git\index{git}, veja o manual.

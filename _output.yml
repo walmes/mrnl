@@ -1,0 +1,54 @@
+# ---- LaTeX/PDF ----
+bookdown::pdf_book:
+  keep_tex: yes
+  highlight: haddock
+  citation_package: natbib
+  # citation_package: biblatex
+  # usar xelatex dá merda!
+  # latex_engine: xelatex
+  dev: "cairo_pdf"
+  includes:
+    in_header: config/pdf_preamble.tex
+    #before_body: config/pdf_before_body.tex
+    #after_body: config/pdf_after_body.tex
+  template: config/wz-template.tex
+  # template: /usr/lib/R/site-library/rmarkdown/rmd/latex/default-1.17.0.2.tex
+
+# ---- EPUB ----
+bookdown::epub_book:
+  cover-image: config/capa.png
+
+# ---- GitBook ----
+bookdown::gitbook:
+  highlight: haddock
+  css: config/gb-style.css
+  includes:
+    in_header: config/MathJax.html
+  config:
+    toc:
+      before: |
+        <center style="margin-top: 2em; margin-bottom: 2em;">
+          <img src="./config/logo.png" width="120px"/>
+          <br>
+          <br>
+          <a href="#" target="blank">
+            <span style="font-weight: bold; font-size: larger;">Modelos de Regressão Não Linear</span></br>
+            conceitos e aplicações em R
+          </a>
+          <br>
+          <br>
+          <a href="http://leg.ufpr.br/~walmes/" target="blank">Walmes Marques Zeviani</a><br>
+          <a href="http://leg.ufpr.br/~wagner/" target="blank">Paulo Justiniano Ribeiro Jr</a><br>
+          <a href="http://leg.ufpr.br/~paulojus/" target="blank">Wagner Hugo Bonat</a>
+          <br>
+          <br>
+          <span style="font-weight: bold; font-size: smaller;">
+            <a href="http://leg.ufpr.br" target="blank">Laboratório de Estatística e Geoinformação</a><br>
+            <a href="http://www.est.ufpr.br/" target="blank">Departamento de Estatística</a><br>
+            <a href="http://www.ufpr.br" target="blank">Universidade Federal do Paraná</a>
+          </span>
+        </center>
+      after: |
+        <a href="https://github.com/walmes/mrnl" target="blank" style="margin-left: 1em;">Produzido com bookdown</a>
+    edit: https://github.com/walmes/mrnl/edit/master/%s
+
