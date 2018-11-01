@@ -31,15 +31,15 @@ bookdown::gitbook:
           <img src="./config/logo.png" width="120px"/>
           <br>
           <br>
-          <a href="#" target="blank">
+          <a href="./index.html">
             <span style="font-weight: bold; font-size: larger;">Modelos de Regressão Não Linear</span></br>
             conceitos e aplicações em R
           </a>
           <br>
           <br>
           <a href="http://leg.ufpr.br/~walmes/" target="blank">Walmes Marques Zeviani</a><br>
-          <a href="http://leg.ufpr.br/~wagner/" target="blank">Paulo Justiniano Ribeiro Jr</a><br>
-          <a href="http://leg.ufpr.br/~paulojus/" target="blank">Wagner Hugo Bonat</a>
+          <a href="http://leg.ufpr.br/~paulojus/" target="blank">Paulo Justiniano Ribeiro Jr</a><br>
+          <a href="http://leg.ufpr.br/~wagner/" target="blank">Wagner Hugo Bonat</a>
           <br>
           <br>
           <span style="font-weight: bold; font-size: smaller;">
