@@ -1,5 +1,9 @@
 # Modelos não lineares
 
+```{r, echo = FALSE}
+read_chunk("scripts/02-estimacao.R")
+```
+
 ```{r, include = FALSE}
 if (isOutput("html")) {
     opts_chunk$set(out.width =  "auto")
@@ -449,4 +453,7 @@ característicos e formas.
 
 ```{r pointsshapes, echo = FALSE, fig.cap = "(ref:pointsshapes)"}
 knitr::include_graphics("./tikz/points_and_shapes.png")
+```
+
+```{r der-parcial}
 ```

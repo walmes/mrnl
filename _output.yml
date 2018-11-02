@@ -20,7 +20,7 @@ bookdown::epub_book:
 
 # ---- GitBook ----
 bookdown::gitbook:
-  highlight: haddock
+  highlight: tango # default, tango, pygments, kate, monochrome, espresso, zenburn, haddock, textmate.
   css: config/gb-style.css
   includes:
     in_header: config/MathJax.html
