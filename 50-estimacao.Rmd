@@ -1,0 +1,450 @@
+# Aspectos da estimação em modelos de regressão não lineares
+
+Este capítulo considera aspectos relacionados à estimação de parâmetros
+em modelos de regressão não linear.  A função `stats::nls()` é a função
+básica para ajuste de modelos não lineares no R.
+
+Assim como em modelo não lineares, a estimação é feita visando
+determinar os parâmetros de tal forma que seja minimizada soma de
+quadrados dos desvios entre valores observados e valores ajustados.  No
+então, diferente dos modelos lineares, a solução para o problema de
+minimização não apresenta solução analítica e então método numéricos de
+otimização serão usados.  Nesse capítulo será visto
+
+  * O funcionamento do método Newton-Raphson.
+  * Como obter erros padrões e intervalos de confiança.
+  * Tipos comuns de falhas de convergência.
+  * Convergência para mínimos locais.
+  * Alguns aspectos da inferência baseada na função de verossimilhança.
+
+```{r, results = "hide"}
+# Pacotes necessários.
+library(bbmle)
+library(rootSolve)
+```
+
+Para demonstrar o processo de otimização pelo método número, serão
+utilizados dados articiais como ingrediente.
+
+```{r}
+# Dados artificiais simulados do modelo Michaelis-Menten.
+set.seed(111)
+x <- 1:10
+y <- 10 * x/(3 + x) + rnorm(x, 0, 0.3)
+plot(y ~ x)
+```
+
+O modelo que será usado é especificado por
+\begin{align}
+  Y|x &\sim \text{Gaussiana}(\mu = \eta(x, \theta), \sigma = \sigma)\\
+  \eta(x, \theta) &= \frac{\theta_a x}{\theta_v + x}.
+\end{align}
+
+A função objetivo para determinação de $\hat{\theta}$ é
+\begin{equation}
+  \text{RSS}(\theta; x, y) = \sum_{i = 1}^{n} (y_i - f(x_i, \theta))^2,
+\end{equation}
+e a solução obtida corresponde a solução de maximizar a função de
+verrossimilhança.
+
+Para ser um exemplo didático, o modelo proposto para os dados contém um
+apenas um parâmetro $\theta$.  O método iterativo de otimização é baseado
+na expressão recursiva
+
+\begin{equation}
+  \theta^{(i+1)} = \theta^{(i)} - (\mathbf{F}^{(i)\top} \mathbf{F}^{(i)})^{-1} \mathbf{F}^{(i)} (\mathbf{y} - f(\mathbf{x}, \theta^{(i)})),
+\end{equation}
+em que
+\begin{equation}
+  \mathbf{F}^{(i)} = \frac{\partial f(\mathbf{x}, \theta)}{\partial \theta}\bigg |_{\theta = \theta^{(i)}}
+\end{equation}
+
+A seguir tem-se as expressões para as funções necessárias.  A função
+`deriv3()` pode ser usada para obter avaliações da função média
+($\eta()$), da primeira derivada desta com relação aos parâmetros
+(gradiente, $\eta'()$) e da segunda derivada com relação aos parâmetros
+(hessiana, $\eta''()$).  Para a estimação, no entanto, o componente
+`hessian` não será usado.
+
+```{r}
+# Derivada da função em relação à \theta.
+D(expression(1 - exp(-x^theta)), "theta")             # \eta'().
+D(D(expression(1 - exp(-x^theta)), "theta"), "theta") # \eta''().
+
+# `deriv3()` retorna \eta(.), \eta'(.) e \eta''(.).
+d3 <- deriv3(expr = ~A * x/(V + x),
+             namevec = c("A", "V"),
+             function.arg = function(x, A, V) {
+                 NULL
+             })
+# Uso.
+str(d3(x, A = 10, V = 3))
+```
+
+
+
+```{r}
+# Valor inicial para A e V.
+theta0 <- c(7, 5)
+
+sqr0 <- crossprod(y)      # Soma de quadrados total.
+dif <- sqr0
+i <- 0                    # Inicia contador de iterações
+maxiter <- 50             # Número máximo de iterações.
+tol <- 1e-8;              # Tolerância.
+while (i <= 50 & dif > tol) {
+    txt <- sprintf("iteração: %d\t SQR: %0.8f\t theta: %s\n",
+                   i,
+                   sqr0,
+                   paste(formatC(theta0, digits = 6, format = "f"),
+                         collapse = " "))
+    cat(txt)
+    #----------------------------------------
+    fF <- d3(x, A = theta0[1], V = theta0[2])
+    f <- c(fF)
+    F <- attr(fF, "gradient")
+    res <- (y - f)
+    sqr1 <- crossprod(res)
+    dif <- abs(sqr0 - sqr1)
+    theta1 <- theta0 + solve(crossprod(F), crossprod(F, res))
+    theta0 <- c(theta1)
+    sqr0 <- sqr1
+    i <- i + 1
+}
+
+theta0
+
+#-----------------------------------------------------------------------
+# Conferindo com a nls().
+
+n0 <- nls(y ~ A * x/(V + x),
+          start = c(A = 7, V = 5),
+          trace = TRUE)
+summary(n0)
+
+#-----------------------------------------------------------------------
+# Visualiando o ajuste.
+
+plot(y ~ x)
+with(as.list(coef(n0)),
+     curve(A * x/(V + x),
+           col = 2,
+           add = TRUE))
+
+#-----------------------------------------------------------------------
+# Quadro de partição de soma de quadrados.
+
+sqtot <- sum(y^2)
+sqtcm <- sum((y - mean(y))^2)
+sqres <- sum((y - f0(x, t0))^2)
+sqreg <- sqtot - sqres
+
+data.frame(GL = c(reg = 1, res = 3),
+           SQ = c(sqreg, sqres),
+           QM = c(sqreg/1, sqres/3),
+           F = c((sqreg/1)/(sqres/3), NA))
+
+#-----------------------------------------------------------------------
+# Obtendo estimativa da variância resídual.
+
+s2 <- sum((y - f0(x, t0))^2)/(nrow(x) - 1)
+s2
+
+#-----------------------------------------------------------------------
+# Obtendo erro-padrão da estimativa.
+
+# simplificado (OLS)
+sqrt(solve(t(F0) %*% F0) * s2)
+
+# geral (OLS, WLS, GLS)
+sdt <- sqrt(solve(t(F0) %*% solve(diag(s2, nrow(x))) %*% F0))
+sdt
+
+#-----------------------------------------------------------------------
+# Intervalo de confiança assintótico para estimativa.
+
+t0 + c(-1, 1) * qt(0.975, df = 3) * sdt
+
+#-----------------------------------------------------------------------
+# Quadro de somas de quadrados.
+
+anova(n0, lm(y ~ 1))[2:1, ]
+
+#-----------------------------------------------------------------------
+# Matriz de covariância das estimativas.
+
+F
+solve(t(F)%*%F)*deviance(n0)/df.residual(n0)
+vcov(n0)          # covariância
+cov2cor(vcov(n0)) # correlação entre estimativas (quais as implicações?)
+
+```
+
+```{r}
+#-----------------------------------------------------------------------------
+# Mensagens de erro durante convergência com a nls().
+
+# 1) matriz de gradiente singular (devido A=0)
+n0 <- nls(y~A*x/(V+x), start=c(A=0, V=5), trace=TRUE)
+
+theta0 <- c(0, 5)
+fF <- d3(x, A=theta0[1], V=theta0[2])
+f <- c(fF)
+F <- attr(fF, "gradient"); F
+crossprod(F)
+solve(crossprod(F))
+
+# 2) erro em derivadas (NA, NaN, Inf)
+# (devido a V=-1 e ter x=1, então V+x = 0 no denominador)
+n0 <- nls(y~A*x/(V+x), start=c(A=7, V=-1), trace=TRUE)
+
+theta0 <- c(7, -1)
+fF <- d3(x, A=theta0[1], V=theta0[2])
+f <- c(fF)
+F <- attr(fF, "gradient")
+F
+
+# 3) convergência para mínimo local
+n0 <- nls(y~A*x/(V+x), start=c(A=7, V=-1.1), trace=TRUE)
+
+# 4) gradiente singular por valores iniciais ruins
+n0 <- nls(y~A*x/(V+x), start=c(A=-17, V=100), trace=TRUE)
+
+# 5) modelo completamente não identificável
+n0 <- nls(y~A*B*x/(V+x), start=c(A=5, B=2, V=1), trace=TRUE)
+n0 <- nls(y~A^B*x/(V+x), start=c(A=3, B=2, V=1), trace=TRUE)
+
+# fator de passos reduzido, pouca curvatura ao redor do local,
+# relacionado à baixa identificabilidade do modelo, correlações altas.
+
+```
+
+```{r}
+#-----------------------------------------------------------------------------
+# Valores iniciais e trajetória sobre a superfície da função objetivo.
+
+# função objetivo RSS - residual sum of squares
+rss <- function(A, V, y, x){
+    sum((y-(A*x)/(V+x))^2)
+}
+RSS <- Vectorize(rss, c("A", "V")) # versão vetorizada
+
+A.grid <- seq(0,40,l=100)
+V.grid <- seq(0,20,l=100)
+rss.surf <- outer(A.grid, V.grid, RSS, y, x)
+contour(A.grid, V.grid, rss.surf, levels=(1:35)^2,
+        xlab="A", ylab="V", col="gray70", main="Superfície da função RSS")
+
+# lista de chutes iniciais
+start.list <- list(s1=c(A=0.1,V=0.1), s2=c(A=40,V=20),
+                   s3=c(A=35,V=2.5), s4=c(A=18,V=18))
+
+# gráficos que vão mostrar a trajetória
+oldpar <- par()
+
+par(mfrow=c(2,2), mar=c(4,4,1,1))
+for(lis in 1:4){
+  contour(A.grid, V.grid, rss.surf, levels=(seq(1,35,2))^2,
+          xlab="A", ylab="V", col="gray70")
+  sink("trace.txt")
+  n0 <- nls(y~A*x/(V+x), start=start.list[[lis]], trace=TRUE)
+  sink()
+  trace <- read.table("trace.txt")
+  for(i in seq(nrow(trace)-1)){
+    arrows(trace[i,"V3"], trace[i,"V4"],
+           trace[i+1,"V3"], trace[i+1,"V4"],
+           col=2, length=0.1)
+    abline(v=trace[i+1,"V3"], h=trace[i+1,"V4"], col="orange", lty=3)
+    Sys.sleep(1)
+    print(c(i, trace[i+1,"V3"], trace[i+1,"V4"]))
+  }
+}; sink()
+
+# agora é conveniente interpretar a matriz de covariância das estimativas!
+vcov(n0)
+cov2cor(vcov(n0))
+
+#-----------------------------------------------------------------------------
+# Valores iniciais inadequados podem levar à mínimos locais.
+# Clique sobre a superfície de contornos para partir a estimação
+# do ponto clicado.
+
+A.grid <- seq(-5,20,l=100)
+V.grid <- seq(-3,10,l=100)
+rss.surf <- outer(A.grid, V.grid, RSS, y, x)
+layout(1)
+
+contour(A.grid, V.grid, rss.surf, levels=(1:35)^2,
+        xlab="A", ylab="V", col="gray70", main="Superfície da função RSS")
+start.click <- locator(n=1); names(start.click) <- c("A","V")
+sink("trace.txt")
+n0 <- nls(y~A*x/(V+x), start=start.click, trace=TRUE)
+sink()
+trace <- read.table("trace.txt")
+for(i in seq(nrow(trace)-1)){
+  arrows(trace[i,"V3"], trace[i,"V4"],
+         trace[i+1,"V3"], trace[i+1,"V4"],
+         col=2, length=0.1)
+  Sys.sleep(1)
+}
+
+#-----------------------------------------------------------------------------
+# Inferência baseada em verossimilhança.
+
+set.seed(321)
+x <- 1:10
+y <- 1-exp(-log(2)*x/2)+rnorm(x,0,0.05)
+plot(y~x)
+
+# parametrizações do modelo monomolecular (assintota fixa em 1):
+# com parâmetro theta_c (taxa na origem): 1-exp(-thc*x)
+# com parâmetro theta_v (tempo de meia vida): 1-exp(-log(2)*x/thv)
+
+```
+
+```{r}
+
+
+#-----------------------------------------------------------------------------
+# Funções de log-verossimilhança.
+
+llc <- function(thc, x, y){
+    m <- 1-exp(-thc*x)
+    s <- sqrt(sum((y-m)^2)/length(y))
+    sum(dnorm(y, m, s, log=TRUE))
+}
+
+llv <- function(thv, x, y){
+    m <- 1-exp(-log(2)*x/thv)
+    s <- sqrt(sum((y-m)^2)/length(y))
+    sum(dnorm(y, m, s, log=TRUE))
+}
+
+#-----------------------------------------------------------------------------
+# Visualizando a função de ll.
+
+len <- 100
+
+thc.g <- seq(log(2)/max(thv.g), log(2)/min(thv.g), l=40)
+llc.g <- sapply(thc.g, llc, x=x, y=y)
+
+thv.g <- seq(1.7, 2.3, l=40)
+llv.g <- sapply(thv.g, llv, x=x, y=y)
+
+par(mfrow=c(1,2))
+plot(llc.g~thc.g, type="l")
+plot(llv.g~thv.g, type="l")
+layout(1)
+
+#-----------------------------------------------------------------------------
+# Estimando os parâmetros por máxima verossimilhança.
+
+opc <- optim(c(log(2)/2), llc, x=x, y=y, method="BFGS",
+             control=list(fnscale=-1), hessian=TRUE)
+opv <- optim(c(2), llv, x=x, y=y, method="BFGS",
+             control=list(fnscale=-1), hessian=TRUE)
+
+(thc <- opc$par)
+(thv <- opv$par)
+log(2)/thv
+(llthc <- opc$value)
+(llthv <- opv$value)
+
+(vthc <- -1/opc$hessian)
+(vthv <- -1/opv$hessian)
+qchi <- qchisq(0.95, df=1)
+qnor <- qnorm(0.975)
+
+#-----------------------------------------------------------------------------
+# Visualizando a log-verossimilhança e a deviance.
+
+par(mfrow=c(2,2))
+# 1
+plot(llc.g~thc.g, type="l",
+     ylab="log-verossimilhança", xlab=expression(th[c]))
+abline(v=thc, h=llthc-c(0,qchi), lty=2)
+# 2
+devc <- -2*(llc.g-llthc)
+plot(devc~thc.g, type="l",
+     ylab="Deviance", xlab=expression(th[c]))
+abline(v=thc, h=c(0,qchi), lty=2)
+curve(((x-thc)^2/vthc), add=TRUE, col=2)
+# 3
+plot(llv.g~thv.g, type="l",
+     ylab="log-verossimilhança", xlab=expression(th[v]))
+abline(v=thv, h=llthv-c(0,qchi), lty=2)
+# 4
+devv <- -2*(llv.g-llthv)
+plot(devv~thv.g, type="l",
+     ylab="Deviance", xlab=expression(th[v]))
+abline(v=thv, h=c(0,qchi), lty=2)
+curve(((x-thv)^2/vthv), add=TRUE, col=2)
+layout(1)
+
+#-----------------------------------------------------------------------------
+# Funções de verossimilhança na escala da deviance para obter IC.
+
+dev.c <- function(thc0, llthc, qchi, x, y){
+    dev <- sapply(thc0,
+                  function(thc00){
+                      m0 <- 1-exp(-thc00*x)
+                      s0 <- sqrt(sum((y-m0)^2)/length(y))
+                      ll0 <- sum(dnorm(y, m0, s0, log=TRUE))
+                      dev <- -2*(ll0-llthc)
+                  })
+    return(dev-qchi)
+}
+
+dev.v <- function(thv0, llthv, qchi, x, y){
+    dev <- sapply(thv0,
+                  function(thv00){
+                      m0 <- 1-exp(-log(2)*x/thv00)
+                      s0 <- sqrt(sum((y-m0)^2)/length(y))
+                      ll0 <- sum(dnorm(y, m0, s0, log=TRUE))
+                      dev <- -2*(ll0-llthv)
+                  })
+    return(dev-qchi)
+}
+
+#-----------------------------------------------------------------------------
+# Obtendo os IC baseados na deviance e na aproximação quadrática.
+
+thc.lim <- uniroot.all(dev.c, interval=c(0.3,0.4),
+                       llthc=llthc, qchi=qchi, x=x, y=y); thc.lim
+thv.lim <- uniroot.all(dev.v, interval=c(1,3),
+                       llthv=llthv, qchi=qchi, x=x, y=y); thv.lim
+
+thc.piv <- thc+c(-1,1)*qnor*sqrt(vthc)
+thv.piv <- thv+c(-1,1)*qnor*sqrt(vthv)
+
+#-----------------------------------------------------------------------------
+# Verificando as diferenças com relação aos extremos do IC.
+
+par(mfrow=c(1,2))
+# 1
+devv <- -2*(llv.g-llthv)
+plot(devv~thv.g, type="l",
+     ylab="Deviance", xlab=expression(th[v]))
+abline(v=thv, h=c(0,qchi), lty=2)
+curve(((x-thv)^2/vthv), add=TRUE, col=2)
+abline(v=thv.lim, lty=2)
+segments(thv.lim, 0, thv.lim, devv(thv.lim), lty=2)
+abline(v=thv.piv, lty=2, col=2)
+# 2
+devc <- -2*(llc.g-llthc)
+plot(devc~thc.g, type="l",
+     ylab="Deviance", xlab=expression(th[c]))
+abline(v=thc, h=c(0,qchi), lty=2)
+curve(((x-thc)^2/vthc), add=TRUE, col=2)
+abline(v=thc.lim, lty=2)
+abline(v=thc.piv, lty=2, col=2)
+layout(1)
+
+#-----------------------------------------------------------------------------
+# Intervalos de confiança baseados na deviance e na aproximação quadrática.
+
+confint(n0)
+confint.default(n0)
+
+#-----------------------------------------------------------------------------
+```

@@ -1,0 +1,232 @@
+---
+title: "Ajuste de Modelos Não Lineares"
+author: >
+  [Walmes Marques Zeviani](http://lattes.cnpq.br/4410617539281650)
+---
+
+```{r setup, include=FALSE}
+# source("config/setup.R")
+```
+
+## Carregando Pacotes
+
+```{r, results = "hide", message = FALSE, error = FALSE, warning = FALSE}
+#-----------------------------------------------------------------------
+# Load packages.
+
+library(lattice)
+library(latticeExtra)
+library(car)
+library(alr3)
+library(nlstools)
+library(nls2)
+library(rootSolve)
+library(wzRfun)
+
+# url <- "http://nls2.googlecode.com/svn-history/r4/trunk/R/as.lm.R"
+# download.file(url, dest = basename(url))
+# path <- ifelse(Sys.info()["user"] == "walmes", basename(url), url)
+# source(path)
+source("~/Dropbox/CursoR/GeneticaEsalq/as.lm.R")
+```
+
+## Ganho de peso em perus em função da metionina na dieta
+
+```{r, eval=TRUE}
+#-----------------------------------------------------------------------
+# Ajuste de modelo de regressão não linear.
+
+# turk0
+str(turk0)
+
+xyplot(Gain ~ A, data = turk0, type = c("p", "smooth"))
+
+#-----------------------------------------------------------------------
+# Valores iniciais baseados na interpretação gráfica.
+# Modelo: th0 + th1 * x/(th2 + x);
+
+start <- list(th0 = 625, th1 = 800 - 625, th2 = 0.1)
+
+xyplot(Gain ~ A, data = turk0) +
+    layer(panel.curve(th0 + th1 * x/(th2 + x)),
+          data = start)
+
+#-----------------------------------------------------------------------
+# Ajuste.
+
+n0 <- nls(Gain ~ th0 + th1 * A/(th2 + A),
+          data = turk0,
+          start = start)
+summary(n0)
+
+xyplot(Gain ~ A, data = turk0)+
+    layer(panel.curve(th0 + th1 * x/(th2 + x), col = 2),
+          data = as.list(coef(n0)))
+
+#-----------------------------------------------------------------------
+# Intervalos de confiança.
+
+# Baseado na log-verossimilhança.
+confint(n0)
+
+# Baseado na aproximação quadrática da verossimilhança, conhecido como
+# intervalos de Wald ou assintóticos. São simétricos por construção.
+confint.default(n0)
+
+#-----------------------------------------------------------------------
+# Colocar bandas de confiança.
+
+# Modelo escrito como função dos parâmetros (theta).
+f <- function(theta, xx){
+    with(as.list(theta),
+         th0 + th1 * xx/(th2 + xx))
+}
+
+# Matriz de derivadas parciais em theta (n x p).
+gradient(f, x = coef(n0), xx = c(0, 0.2, 0.4))
+
+pred <- data.frame(A = seq(0, 0.5, l = 20))
+pred$fit <- predict(n0, newdata = pred)
+der <- gradient(f, x = coef(n0), xx = pred$A)
+str(der)
+
+# Etapas até o IC passando pelo erro padrão e margem de erro.
+F <- der
+U <- chol(vcov(n0))
+pred$se <- sqrt(apply(F %*% t(U), 1, function(x) sum(x^2)))
+tval <- qt(p = c(lwr = 0.025, upr = 0.975), df = df.residual(n0))
+me <- outer(pred$se, tval, "*")
+pred <- cbind(pred, sweep(me, 1, pred$fit, "+"))
+str(pred)
+
+# Equação do modelo ajustado.
+coef(n0)
+formula(n0)
+
+# Observados, preditos e a banda de confiança.
+xyplot(Gain ~ A, data = turk0) +
+    as.layer(xyplot(fit ~ A, data = pred, type = "l",
+                    prepanel = prepanel.cbH, cty = "bands",
+                    ly = pred$lwr, uy = pred$upr, panel = panel.cbH))
+```
+
+```{r, eval=TRUE, cache=TRUE}
+#-----------------------------------------------------------------------
+# Região de confiança para os parâmetros.
+
+apropos("contour")
+ncp0 <- nlsContourRSS(n0)
+plot(ncp0)
+
+ncr0 <- nlsConfRegions(n0)
+plot(ncr0)
+```
+
+## Consumo de energia em função da temperatura
+
+```{r}
+#-----------------------------------------------------------------------
+# Consumo de energia (KWH/dia) em função da temperatura (F).
+
+str(segreg)
+xyplot(C ~ Temp, data = segreg, type = c("p", "smooth"))
+
+#-----------------------------------------------------------------------
+# Ajuste do modelo platô linear.
+# f(x) = th0 + th1 * (x - th2) * (x >= th2) + 0 * (x < th2)
+
+start <- list(th0 = 75, th1 = 0.5, th2 = 50)
+xyplot(C ~ Temp, data = segreg) +
+    layer(panel.curve(th0 + th1 * (x - th2) * (x >= th2) +
+                      0 * (x < th2)), data = start)
+
+# Ajuste.
+n2 <- nls(C ~ th0 + th1 * (Temp - th2) * (Temp >= th2) +
+              0 * (Temp < th2),
+          data = segreg, start = start)
+
+# Estimativas e medidas de ajuste.
+summary(n2)
+
+# Valor de F e R².
+R2nls(n2)
+
+# Intervalos de confiança.
+# confint(n2)
+confint.default(n2)
+
+# Observados e preditos.
+xyplot(C ~ Temp, data = segreg) +
+    layer(panel.curve(th0 + th1 * (x - th2) * (x >= th2) +
+                      0 * (x < th2), col = 4), data = as.list(coef(n2)))
+
+#-----------------------------------------------------------------------
+# Análise dos resíduos.
+
+m2 <- as.lm(n2)
+par(mfrow = c(2, 2))
+plot(m2)
+layout(1)
+
+#-----------------------------------------------------------------------
+# Colocar bandas de confiança.
+
+f <- function(theta, xx) {
+    with(as.list(theta),
+         th0 + th1 * (xx - th2) * (xx >= th2) +
+         0 * (xx < th2))
+}
+
+pred <- data.frame(Temp = sort(c(seq(10, 80, l = 100),
+                                 coef(n2)["th2"] +
+                                 c(-0.001, 0, 0.001))))
+
+pred$fit <- predict(n2, newdata = pred)
+der <- gradient(f, x = coef(n2), xx = pred$Temp)
+str(der)
+
+F <- der
+U <- chol(vcov(n2))
+pred$se <- sqrt(apply(F %*% t(U), 1, function(x) sum(x^2)))
+tval <- qt(p = c(lwr = 0.025, upr = 0.975), df = df.residual(n2))
+me <- outer(pred$se, tval, "*")
+pred <- cbind(pred, sweep(me, 1, pred$fit, "+"))
+str(pred)
+
+# Equação do modelo ajustado.
+coef(n2)
+formula(n2)
+
+# Arredonda as estimativas.
+theta <- mapply(round,
+                x = coef(n2),
+                digits = c(2, 4, 2),
+                SIMPLIFY = FALSE)
+theta
+
+# Equação.
+formula(n2)
+eq <- substitute(
+    expr = c(
+        expression(C==th0~", se"~Temp < th2),
+        expression(C==th0 + th1 * (Temp - th2)~", se"~Temp >= th2)),
+    env = theta)
+eval(eq)
+
+# Observados, preditos e a banda de confiança.
+xyplot(C ~ Temp, data = segreg) +
+    as.layer(xyplot(fit ~ Temp, data = pred, type = "l",
+                    prepanel = prepanel.cbH, cty = "bands",
+                    ly = pred$lwr, uy = pred$upr,
+                    panel = panel.cbH)) +
+    layer(panel.key(points = FALSE, text = eval(eq),
+                    corner = c(0.05, 0.95)))
+```
+
+## Informações da Sessão
+
+```{r, echo = FALSE, results = "hold"}
+cat(format(Sys.time(),
+           format = "Updated in %Y-%m-%d.\n\n"))
+sessionInfo()
+```
