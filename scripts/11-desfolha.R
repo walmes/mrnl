@@ -10,6 +10,9 @@
 #=======================================================================
 # Ajuste de curvas com estrutura experimental.
 
+#-----------------------------------------------------------------------
+# Parâmetros.
+
 library(lattice)
 library(latticeExtra)
 library(nlme)
@@ -350,6 +353,8 @@ round(summary(nn2)$tTable, digits = 4)
 #-----------------------------------------------------------------------
 # Testes de hipótese.
 
+saved_coef <- coef(nn1)
+
 # COMMENT: não se rejeita a hipótese nula de que C == 0 para "Botão
 # Floral", "Florescimento" e "Capulho".
 
@@ -361,6 +366,40 @@ round(summary(nn2)$tTable, digits = 4)
 coef(nn1)["xde.estagCapulho"]
 b <- 5/coef(nn1)["f1.estagCapulho"]
 b
+
+L <- matrix(0, nrow = 1, ncol = length(coef(nn1)))
+L[1, 15] <- 1
+L
+
+# Teste para theta == 0.
+anova(nn1, L = L)
+
+# DANGER: Subtrai do valor sob hipótese dentro do objeto. Isso só é
+# possível porque objetos de classe S3 permitem que você modique o
+# conteúdo do objeto. Cuidado para não corromper o objeto.
+nn1$coefficients[15] <- nn1$coefficients[15] - b
+coef(nn1)
+
+# Agora o teste para theta == 0 é o que se pretendia.
+anova(nn1, L = L)
+
+# Restaura os coeficientes.
+nn1$coefficients <- saved_coef
+
+# Fazendo para todos os níveis.
+for (i in 11:15) {
+    b <- 5/coef(nn1)[i - 5]
+    cat("H_0: xde == ", b, "\n")
+    cat("Estimated xde:", nn1$coefficients[i], "\n\n")
+    L <- matrix(0, nrow = 1, ncol = length(coef(nn1)))
+    L[1, i] <- 1
+    nn1$coefficients[i] <- nn1$coefficients[i] - b
+    print(anova(nn1, L = L))
+    cat("\n")
+}
+
+# Restaura os coeficientes.
+nn1$coefficients <- saved_coef
 
 # ATTENTION: está sendo usada a estatítica Chi-quadrado mesmo
 # explicitando a estatística F. A suposição é de que a função não esteja
